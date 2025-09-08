@@ -1,0 +1,63 @@
+name: Create Repo from Issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  create_repo:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write # para comentar na issue
+      contents: write # para criar repositórios com gh
+      repository-projects: write
+
+    steps:
+      - name: Extrair dados da issue
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body;
+
+            // Regex para capturar o nome do repositório
+            const repoName = body.match(/Nome do repositório.*\n.*: (.*)/)?.[1]?.trim();
+
+            // Template (nesse caso só "Blank")
+            const template = body.match(/Template.*\n.*: (.*)/)?.[1]?.trim();
+
+            if (!repoName) {
+              core.setFailed("Não foi possível capturar o nome do repositório.");
+            }
+
+            core.setOutput("repo_name", repoName);
+            core.setOutput("template", template);
+
+      - name: Criar repositório Blank
+        run: |
+          gh repo create ${{ github.repository_owner }}/${{ steps.parse.outputs.repo_name }} \
+            --public \
+            --description "Repositório criado automaticamente a partir do template Blank" \
+            --confirm
+
+          echo "# ${{ steps.parse.outputs.repo_name }}" > README.md
+          git init
+          git remote add origin https://github.com/${{ github.repository_owner }}/${{ steps.parse.outputs.repo_name }}.git
+          git add .
+          git commit -m "chore: initial commit from Blank template"
+          git branch -M main
+          git push -u origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comentar na issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ Repositório criado com sucesso: https://github.com/${context.repo.owner}/${{ steps.parse.outputs.repo_name }}`
+            });

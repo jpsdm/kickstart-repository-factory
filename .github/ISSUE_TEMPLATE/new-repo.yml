@@ -1,0 +1,22 @@
+name: "Criar novo repositório"
+description: "Use este formulário para criar um novo repositório baseado no template Blank."
+title: "Novo repositório: "
+body:
+  - type: input
+    id: repo_name
+    attributes:
+      label: Nome do repositório
+      description: Nome curto e único
+      placeholder: meu-novo-projeto
+    validations:
+      required: true
+
+  - type: dropdown
+    id: template
+    attributes:
+      label: Template
+      description: Qual template usar?
+      options:
+        - Blank
+    validations:
+      required: true
